@@ -259,11 +259,11 @@ class MidiLoader(object):
         mid.save(midi_file)
 
 
-mid = MidiLoader('/home/fx/Downloads/10cc_-_Dreadlock_Holiday.mid', resolution=24)
+# mid = MidiLoader('/home/fx/Downloads/10cc_-_Dreadlock_Holiday.mid', resolution=24)
 
-mid.write('/tmp/test.mid')
-roll = mid.instruments[4].get_piano_roll()
-import matplotlib.pyplot as plt
-plt.imshow(roll.T, aspect='auto')
-plt.gca().invert_yaxis()
-plt.show()
+# mid.write('/tmp/test.mid')
+# roll = mid.instruments[4].get_piano_roll()
+# import matplotlib.pyplot as plt
+# plt.imshow(roll.T, aspect='auto')
+# plt.gca().invert_yaxis()
+# plt.show()
