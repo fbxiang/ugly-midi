@@ -1,5 +1,5 @@
-from instrument import Instrument
-from containers import Note, TimeSignature, KeySignature, TempoChange
+from .instrument import Instrument
+from .containers import Note, TimeSignature, KeySignature, TempoChange
 from mido import MidiFile, MetaMessage, Message
 import numpy as np
 import warnings
