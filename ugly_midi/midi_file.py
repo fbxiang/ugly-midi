@@ -1,5 +1,5 @@
-from .instrument import Instrument
-from .containers import Note, TimeSignature, KeySignature, TempoChange
+from ugly_midi.instrument import Instrument
+from ugly_midi.containers import Note, TimeSignature, KeySignature, TempoChange
 from mido import MidiFile, MetaMessage, Message
 import numpy as np
 import warnings
@@ -259,11 +259,15 @@ class MidiLoader(object):
         mid.save(midi_file)
 
 
-# mid = MidiLoader('/home/fx/Downloads/10cc_-_Dreadlock_Holiday.mid', resolution=24)
-
-# mid.write('/tmp/test.mid')
-# roll = mid.instruments[4].get_piano_roll()
 # import matplotlib.pyplot as plt
+# from ugly_midi.instrument import get_instrument_from_piano_roll
+# mid = MidiLoader('/home/fx/Downloads/10cc_-_Dreadlock_Holiday.mid', resolution=24)
+# roll = mid.instruments[1].get_piano_roll()
+
+# instr = get_instrument_from_piano_roll(roll)
+# roll = instr.get_piano_roll()
+
+
 # plt.imshow(roll.T, aspect='auto')
 # plt.gca().invert_yaxis()
 # plt.show()
