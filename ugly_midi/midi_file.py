@@ -72,7 +72,8 @@ class MidiLoader(object):
                 self.time_signatures.append(
                     TimeSignature(msg.numerator, msg.denominator, msg.time))
             elif msg.type == 'set_tempo':
-                self.tempo_changes.append(TempoChange(tempo2bpm(msg.tempo), msg.time))
+                self.tempo_changes.append(
+                    TempoChange(tempo2bpm(msg.tempo), msg.time))
             elif msg.type in ['note_on', 'note_off']:
                 warnings.warn(
                     'Track 0 contains note information; This file may be invalid.',
@@ -100,42 +101,24 @@ class MidiLoader(object):
         # This dict will map track indices to any track names encountered
         track_name_map = collections.defaultdict(str)
 
-        def __get_instrument(program, channel, track, create_new):
-            """Gets the Instrument corresponding to the given program number,
-            drum/non-drum type, channel, and track index.  If no such
-            instrument exists, one is created.
-            """
-            # If we have already created an instrument for this program
-            # number/track/channel, return it
+        def __get_instrument(program, channel, track):
+
             if (program, channel, track) in instrument_map:
                 return instrument_map[(program, channel, track)]
-            # If there's a straggler instrument for this instrument and we
-            # aren't being requested to create a new instrument
-            if not create_new and (channel, track) in stragglers:
-                return stragglers[(channel, track)]
-            # If we are told to, create a new instrument and store it
-            if create_new:
-                is_drum = (channel == 9)
-                instrument = Instrument(program, is_drum,
-                                        track_name_map[track_idx])
-                # If any events appeared for this instrument before now,
-                # include them in the new instrument
-                if (channel, track) in stragglers:
-                    straggler = stragglers[(channel, track)]
-                    instrument.control_changes = straggler.control_changes
-                    instrument.pitch_bends = straggler.pitch_bends
-                # Add the instrument to the instrument map
-                instrument_map[(program, channel, track)] = instrument
-            # Otherwise, create a "straggler" instrument which holds events
-            # which appear before we actually want to create a proper new
-            # instrument
-            else:
-                # Create a "straggler" instrument
-                instrument = Instrument(program, track_name_map[track_idx])
-                # Note that stragglers ignores program number, because we want
-                # to store all events on a track which appear before the first
-                # note-on, regardless of program
-                stragglers[(channel, track)] = instrument
+
+            is_drum = (channel == 9)
+            instrument = Instrument(program, is_drum,
+                                    track_name_map[track_idx])
+
+            # If any events appeared for this instrument before now,
+            # include them in the new instrument
+            if (channel, track) in stragglers:
+                straggler = stragglers[(channel, track)]
+                instrument.control_changes = straggler.control_changes
+                instrument.pitch_bends = straggler.pitch_bends
+            # Add the instrument to the instrument map
+            instrument_map[(program, channel, track)] = instrument
+
             return instrument
 
         # NOTICE: it is actually possible to use program_change to affect other
@@ -170,8 +153,7 @@ class MidiLoader(object):
                 key = (track_id, event.channel, event.note)
                 if key in last_note_on:
                     prog, vel, t = last_note_on[key]
-                    instr = __get_instrument(prog, event.channel, track_id,
-                                             True)
+                    instr = __get_instrument(prog, event.channel, track_id)
                     if event.time == t:
                         continue
                     instr.add_note(Note(vel, event.note, t, event.time))
@@ -209,7 +191,8 @@ class MidiLoader(object):
                     time=ts.time))
         for tc in self.tempo_changes:
             events.append(
-                MetaMessage('set_tempo', tempo=bpm2tempo(tc.bpm), time=tc.time))
+                MetaMessage(
+                    'set_tempo', tempo=bpm2tempo(tc.bpm), time=tc.time))
         events = sorted(events, key=lambda msg: msg.time)
         now = 0
         for msg in events:
@@ -306,7 +289,8 @@ class MidiWriter(object):
                     time=ts.time))
         for tc in self.tempo_changes:
             events.append(
-                MetaMessage('set_tempo', tempo=bpm2tempo(tc.bpm), time=tc.time))
+                MetaMessage(
+                    'set_tempo', tempo=bpm2tempo(tc.bpm), time=tc.time))
         events = sorted(events, key=lambda msg: msg.time)
         now = 0
         for msg in events:
@@ -363,16 +347,7 @@ class MidiWriter(object):
         mid.save(midi_file)
 
 
-def midi_write_pianoroll(midi_file,
-                         roll,
-                         resolution,
-                         program=0,
-                         is_drum=False,
-                         bpm=120):
-    mid = MidiWriter(resolution)
-    mid.add_instrument(get_instrument_from_piano_roll(roll, program, is_drum))
-    mid.tempo_changes = [TempoChange(bpm, 0)]
-    mid.write(midi_file)
+
 
 
 # import matplotlib.pyplot as plt
