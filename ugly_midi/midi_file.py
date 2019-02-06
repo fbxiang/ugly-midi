@@ -1,6 +1,6 @@
-from ugly_midi.instrument import Instrument
+from ugly_midi.instrument import Instrument, get_instrument_from_piano_roll
 from ugly_midi.containers import Note, TimeSignature, KeySignature, TempoChange
-from mido import MidiFile, MetaMessage, Message
+from mido import MidiFile, MetaMessage, Message, bpm2tempo, tempo2bpm
 import numpy as np
 import warnings
 import collections
@@ -72,7 +72,7 @@ class MidiLoader(object):
                 self.time_signatures.append(
                     TimeSignature(msg.numerator, msg.denominator, msg.time))
             elif msg.type == 'set_tempo':
-                self.tempo_changes.append(TempoChange(msg.tempo, msg.time))
+                self.tempo_changes.append(TempoChange(tempo2bpm(msg.tempo), msg.time))
             elif msg.type in ['note_on', 'note_off']:
                 warnings.warn(
                     'Track 0 contains note information; This file may be invalid.',
@@ -194,21 +194,28 @@ class MidiLoader(object):
     def write(self, midi_file):
         mid = MidiFile(ticks_per_beat=self.resolution)
 
-        # info track
         track = mid.add_track()
+
+        events = []
         for ks in self.key_signatures:
-            track.append(
-                MetaMessage('key_signature', key=ks.key_number, time=ks.time))
+            events.append(
+                MetaMessage('key_signature', key=ks.key, time=ks.time))
         for ts in self.time_signatures:
-            track.append(
+            events.append(
                 MetaMessage(
                     'time_signature',
                     numerator=ts.numerator,
                     denominator=ts.denominator,
                     time=ts.time))
         for tc in self.tempo_changes:
-            track.append(
-                MetaMessage('set_tempo', tempo=tc.tempo, time=tc.time))
+            events.append(
+                MetaMessage('set_tempo', tempo=bpm2tempo(tc.bpm), time=tc.time))
+        events = sorted(events, key=lambda msg: msg.time)
+        now = 0
+        for msg in events:
+            msg.time -= now
+            track.append(msg)
+            now += msg.time
 
         if len([instr
                 for instr in self.instruments if not instr.is_drum]) > 15:
@@ -259,15 +266,125 @@ class MidiLoader(object):
         mid.save(midi_file)
 
 
-# import matplotlib.pyplot as plt
-# from ugly_midi.instrument import get_instrument_from_piano_roll
-# mid = MidiLoader('/home/fx/Downloads/10cc_-_Dreadlock_Holiday.mid', resolution=24)
-# roll = mid.instruments[1].get_piano_roll()
+class MidiWriter(object):
+    def __init__(self, resolution):
+        self.instruments = []
+        self.tempo_changes = []
+        self.key_signatures = []
+        self.time_signatures = []
+        self.resolution = resolution
 
-# instr = get_instrument_from_piano_roll(roll)
-# roll = instr.get_piano_roll()
+    def add_instrument(self, instr):
+        if not isinstance(instr, Instrument):
+            raise TypeError('Expecting an Instrument')
+
+        self.instruments.append(instr)
+
+    # TODO: add functions for tempo and signatures
+
+    def write(self, midi_file):
+        mid = MidiFile(ticks_per_beat=self.resolution)
+
+        if not self.time_signatures:
+            self.time_signatures = [TimeSignature(4, 4, 0)]
+
+        if not self.tempo_changes:
+            self.tempo_changes = [TempoChange(120, 0)]
+
+        track = mid.add_track()
+
+        events = []
+        for ks in self.key_signatures:
+            events.append(
+                MetaMessage('key_signature', key=ks.key, time=ks.time))
+        for ts in self.time_signatures:
+            events.append(
+                MetaMessage(
+                    'time_signature',
+                    numerator=ts.numerator,
+                    denominator=ts.denominator,
+                    time=ts.time))
+        for tc in self.tempo_changes:
+            events.append(
+                MetaMessage('set_tempo', tempo=bpm2tempo(tc.bpm), time=tc.time))
+        events = sorted(events, key=lambda msg: msg.time)
+        now = 0
+        for msg in events:
+            msg.time -= now
+            track.append(msg)
+            now += msg.time
+
+        if len([instr
+                for instr in self.instruments if not instr.is_drum]) > 15:
+            warnings.warn(
+                "Synthesizing with more than 15 instruments is not supported",
+                RuntimeWarning)
+
+        current_channel = 0
+        for instr in self.instruments:
+            track = mid.add_track()
+            channel = 9 if instr.is_drum else current_channel
+
+            track.append(
+                Message(
+                    'program_change',
+                    channel=channel,
+                    program=instr.program,
+                    time=0))
+
+            note_msgs = []
+            for n in instr.notes:
+                note_msgs.append(
+                    Message(
+                        'note_on',
+                        channel=channel,
+                        note=n.pitch,
+                        velocity=n.velocity,
+                        time=n.start))
+                note_msgs.append(
+                    Message(
+                        'note_off',
+                        channel=channel,
+                        note=n.pitch,
+                        velocity=0,
+                        time=n.end))
+
+            note_msgs = sorted(note_msgs, key=lambda msg: msg.time)
+            now = 0
+            for msg in note_msgs:
+                track.append(msg.copy(time=msg.time - now))
+                now = msg.time
+
+            if not instr.is_drum:
+                current_channel += 1
+                if current_channel > 15:
+                    break
+
+        mid.save(midi_file)
 
 
-# plt.imshow(roll.T, aspect='auto')
-# plt.gca().invert_yaxis()
-# plt.show()
+def midi_write_pianoroll(midi_file,
+                         roll,
+                         resolution,
+                         program=0,
+                         is_drum=False,
+                         bpm=120):
+    mid = MidiWriter(resolution)
+    mid.add_instrument(get_instrument_from_piano_roll(roll, program, is_drum))
+    mid.tempo_changes = [TempoChange(bpm, 0)]
+    mid.write(midi_file)
+
+
+import matplotlib.pyplot as plt
+from ugly_midi.instrument import get_instrument_from_piano_roll
+mid = MidiLoader('/home/fx/bach/data/bach/aof/can1.mid', resolution=24)
+roll = mid.instruments[0].get_piano_roll()
+
+instr = get_instrument_from_piano_roll(roll)
+roll = instr.get_piano_roll()
+
+midi_write_pianoroll('/tmp/test.mid', roll, 24)
+
+plt.imshow(roll.T, aspect='auto')
+plt.gca().invert_yaxis()
+plt.show()
