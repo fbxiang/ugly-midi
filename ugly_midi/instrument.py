@@ -81,3 +81,13 @@ def get_instrument_from_piano_roll(roll, program=0, is_drum=False, name=''):
         if prev_val != 0:
             instr.add_note(Note(prev_val, pitch, start_t, roll.shape[0]))
     return instr
+
+
+def merge_instruments(instr1, instr2):
+    assert isinstance(instr1, Instrument)
+    assert isinstance(instr2, Instrument)
+    assert instr1.is_drum == instr2.is_drum
+
+    instr = Instrument(instr1.program, is_drum=instr1.is_drum, name=instr1.name)
+    instr.notes = instr1.notes + instr2.notes
+    return instr
