@@ -375,16 +375,16 @@ def midi_write_pianoroll(midi_file,
     mid.write(midi_file)
 
 
-import matplotlib.pyplot as plt
-from ugly_midi.instrument import get_instrument_from_piano_roll
-mid = MidiLoader('/home/fx/bach/data/bach/aof/can1.mid', resolution=24)
-roll = mid.instruments[0].get_piano_roll()
+# import matplotlib.pyplot as plt
+# from ugly_midi.instrument import get_instrument_from_piano_roll
+# mid = MidiLoader('/home/fx/bach/data/bach/aof/can1.mid', resolution=24)
+# roll = mid.instruments[0].get_piano_roll()
 
-instr = get_instrument_from_piano_roll(roll)
-roll = instr.get_piano_roll()
+# instr = get_instrument_from_piano_roll(roll)
+# roll = instr.get_piano_roll()
 
-midi_write_pianoroll('/tmp/test.mid', roll, 24)
+# midi_write_pianoroll('/tmp/test.mid', roll, 24)
 
-plt.imshow(roll.T, aspect='auto')
-plt.gca().invert_yaxis()
-plt.show()
+# plt.imshow(roll.T, aspect='auto')
+# plt.gca().invert_yaxis()
+# plt.show()
