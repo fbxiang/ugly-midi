@@ -1,4 +1,4 @@
-from ugly_midi.midi_file import MidiWriter
+from ugly_midi.midi_file import MidiObject
 from ugly_midi.instrument import Instrument
 from ugly_midi.containers import Note, TempoChange
 import numpy as np
@@ -115,7 +115,7 @@ def midi_write_pianoroll(midi_file,
                          program=0,
                          is_drum=False,
                          bpm=120):
-    mid = MidiWriter(resolution)
+    mid = MidiObject(resolution=resolution)
     mid.add_instrument(get_instrument_from_piano_roll(roll, program, is_drum))
     mid.tempo_changes = [TempoChange(bpm, 0)]
     mid.write(midi_file)

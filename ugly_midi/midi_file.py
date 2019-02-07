@@ -12,14 +12,14 @@ MAX_TICK = 1e7
 class MidiObject(object):
     """Class for reading midi files"""
 
-    def __init__(self, midi_file, resolution=None):
+    def __init__(self, midi_file=None, resolution=None):
         if resolution is not None:
             if (not isinstance(resolution, int)) or (resolution <= 0):
                 raise ValueError(
                     'Invalid resolution {} specified. Expecting a positive integer.'
                     .format(resolution))
 
-        if not os.path.exists(midi_file) and midi_file.endswith('mid'):
+        if midi_file is None:
             assert resolution is not None
             self.instruments = []
             self.tempo_changes = []
