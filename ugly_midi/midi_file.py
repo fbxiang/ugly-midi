@@ -1,4 +1,4 @@
-from ugly_midi.instrument import Instrument, get_instrument_from_piano_roll
+from ugly_midi.instrument import Instrument
 from ugly_midi.containers import Note, TimeSignature, KeySignature, TempoChange
 from mido import MidiFile, MetaMessage, Message, bpm2tempo, tempo2bpm
 import numpy as np
