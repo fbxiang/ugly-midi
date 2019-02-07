@@ -4,14 +4,30 @@ from mido import MidiFile, MetaMessage, Message, bpm2tempo, tempo2bpm
 import numpy as np
 import warnings
 import collections
+import os
 
 MAX_TICK = 1e7
 
 
-class MidiLoader(object):
+class MidiObject(object):
     """Class for reading midi files"""
 
     def __init__(self, midi_file, resolution=None):
+        if resolution is not None:
+            if (not isinstance(resolution, int)) or (resolution <= 0):
+                raise ValueError(
+                    'Invalid resolution {} specified. Expecting a positive integer.'
+                    .format(resolution))
+
+        if not os.path.exists(midi_file) and midi_file.endswith('mid'):
+            assert resolution is not None
+            self.instruments = []
+            self.tempo_changes = []
+            self.key_signatures = []
+            self.time_signatures = []
+            self.resolution = resolution
+            return
+
         midi_data = MidiFile(midi_file)
         if midi_data.type != 1:
             raise ValueError('Midi type {} ({}) is not supported.'.format(
@@ -20,11 +36,6 @@ class MidiLoader(object):
             raise ValueError(
                 'File {} appears to have too few midi tracks. It is invalid.'.
                 format(midi_file))
-        if resolution is not None:
-            if (not isinstance(resolution, int)) or (resolution <= 0):
-                raise ValueError(
-                    'Invalid resolution {} specified. Expecting a positive integer.'
-                    .format(resolution))
 
         # convert tick to absolute
         for track in midi_data.tracks:
@@ -176,101 +187,11 @@ class MidiLoader(object):
     def write(self, midi_file):
         mid = MidiFile(ticks_per_beat=self.resolution)
 
-        track = mid.add_track()
-
-        events = []
-        for ks in self.key_signatures:
-            events.append(
-                MetaMessage('key_signature', key=ks.key, time=ks.time))
-        for ts in self.time_signatures:
-            events.append(
-                MetaMessage(
-                    'time_signature',
-                    numerator=ts.numerator,
-                    denominator=ts.denominator,
-                    time=ts.time))
-        for tc in self.tempo_changes:
-            events.append(
-                MetaMessage(
-                    'set_tempo', tempo=bpm2tempo(tc.bpm), time=tc.time))
-        events = sorted(events, key=lambda msg: msg.time)
-        now = 0
-        for msg in events:
-            msg.time -= now
-            track.append(msg)
-            now += msg.time
-
-        if len([instr
-                for instr in self.instruments if not instr.is_drum]) > 15:
-            warnings.warn(
-                "Synthesizing with more than 15 instruments is not supported",
-                RuntimeWarning)
-
-        current_channel = 0
-        for instr in self.instruments:
-            track = mid.add_track()
-            channel = 9 if instr.is_drum else current_channel
-
-            track.append(
-                Message(
-                    'program_change',
-                    channel=channel,
-                    program=instr.program,
-                    time=0))
-
-            note_msgs = []
-            for n in instr.notes:
-                note_msgs.append(
-                    Message(
-                        'note_on',
-                        channel=channel,
-                        note=n.pitch,
-                        velocity=n.velocity,
-                        time=n.start))
-                note_msgs.append(
-                    Message(
-                        'note_off',
-                        channel=channel,
-                        note=n.pitch,
-                        velocity=0,
-                        time=n.end))
-
-            note_msgs = sorted(note_msgs, key=lambda msg: msg.time)
-            now = 0
-            for msg in note_msgs:
-                track.append(msg.copy(time=msg.time - now))
-                now = msg.time
-
-            if not instr.is_drum:
-                current_channel += 1
-                if current_channel > 15:
-                    break
-
-        mid.save(midi_file)
-
-
-class MidiWriter(object):
-    def __init__(self, resolution):
-        self.instruments = []
-        self.tempo_changes = []
-        self.key_signatures = []
-        self.time_signatures = []
-        self.resolution = resolution
-
-    def add_instrument(self, instr):
-        if not isinstance(instr, Instrument):
-            raise TypeError('Expecting an Instrument')
-
-        self.instruments.append(instr)
-
-    # TODO: add functions for tempo and signatures
-
-    def write(self, midi_file):
-        mid = MidiFile(ticks_per_beat=self.resolution)
-
+        # default time signature
         if not self.time_signatures:
             self.time_signatures = [TimeSignature(4, 4, 0)]
 
+        # default tempo
         if not self.tempo_changes:
             self.tempo_changes = [TempoChange(120, 0)]
 
@@ -346,20 +267,8 @@ class MidiWriter(object):
 
         mid.save(midi_file)
 
+    def add_instrument(self, instr):
+        if not isinstance(instr, Instrument):
+            raise TypeError('Expecting an Instrument')
 
-
-
-
-# import matplotlib.pyplot as plt
-# from ugly_midi.instrument import get_instrument_from_piano_roll
-# mid = MidiLoader('/home/fx/bach/data/bach/aof/can1.mid', resolution=24)
-# roll = mid.instruments[0].get_piano_roll()
-
-# instr = get_instrument_from_piano_roll(roll)
-# roll = instr.get_piano_roll()
-
-# midi_write_pianoroll('/tmp/test.mid', roll, 24)
-
-# plt.imshow(roll.T, aspect='auto')
-# plt.gca().invert_yaxis()
-# plt.show()
+        self.instruments.append(instr)
