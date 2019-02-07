@@ -4,6 +4,75 @@ from ugly_midi.containers import Note, TempoChange
 import numpy as np
 
 
+def program2family(prog):
+    if prog < 8:
+        return 'Piano'
+    if prog < 16:
+        return 'Chromatic Percussion'
+    if prog < 24:
+        return 'Organ'
+    if prog < 32:
+        return 'Guitar'
+    if prog < 40:
+        return 'Bass'
+    if prog < 48:
+        return 'Strings'
+    if prog < 56:
+        return 'Ensemble'
+    if prog < 64:
+        return 'Brass'
+    if prog < 72:
+        return 'Reed'
+    if prog < 80:
+        return 'Pipe'
+    if prog < 88:
+        return 'Synth Lead'
+    if prog < 96:
+        return 'Synth Pad'
+    if prog < 104:
+        return 'Synth Effects'
+    if prog < 112:
+        return 'Ethnic'
+    if prog < 120:
+        return 'Percussive'
+    if prog < 128:
+        return 'Sound Effects'
+
+
+def program2family5(prog):
+    family = program2family(prog)
+    if family in ['Piano', 'Chromatic Percussion']:
+        return 'Piano'
+    if family in ['Guitar']:
+        return 'Guitar'
+    if family in ['Bass']:
+        return 'Bass'
+    if family in [
+            'Organ', 'Strings', 'Ensemble', 'Synth Lead', 'Synth Pad', 'Brass',
+            'Reed', 'Pipe', 'Ethnic'
+    ]:
+        return 'Ensemble'
+    return -1
+
+
+def family2program(name):
+    """
+    classify instruments into 5 categories
+    """
+    if name in ['Piano', 'Chromatic Percussion']:
+        return 0
+    if name in ['Guitar']:
+        return 24
+    if name in ['Bass']:
+        return 32
+    if name in [
+            'Organ', 'Strings', 'Ensemble', 'Synth Lead', 'Synth Pad', 'Brass',
+            'Reed', 'Pipe', 'Ethnic'
+    ]:
+        return 40
+    return -1
+
+
 def get_instrument_from_piano_roll(roll, program=0, is_drum=False, name=''):
     if not isinstance(roll, np.ndarray):
         raise TypeError('Piano roll should be an np.ndarray')
