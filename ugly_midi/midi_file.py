@@ -31,9 +31,9 @@ class MidiObject(object):
         if midi_data.type not in [0, 1]:
             raise ValueError('Midi type {} ({}) is not supported.'.format(
                 midi_data.type, midi_file))
-        if len(midi_data.tracks) <= 1:
+        if len(midi_data.tracks) < 1:
             raise ValueError(
-                'File {} appears to have too few midi tracks. It is invalid.'.
+                'File {} appears to have no midi tracks. It is invalid.'.
                 format(midi_file))
 
         # convert tick to absolute
