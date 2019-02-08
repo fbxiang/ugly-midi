@@ -4,7 +4,6 @@ from mido import MidiFile, MetaMessage, Message, bpm2tempo, tempo2bpm
 import numpy as np
 import warnings
 import collections
-import os
 
 MAX_TICK = 1e7
 
@@ -29,7 +28,7 @@ class MidiObject(object):
             return
 
         midi_data = MidiFile(midi_file)
-        if midi_data.type != 1:
+        if midi_data.type not in [0, 1]:
             raise ValueError('Midi type {} ({}) is not supported.'.format(
                 midi_data.type, midi_file))
         if len(midi_data.tracks) <= 1:
@@ -85,10 +84,8 @@ class MidiObject(object):
             elif msg.type == 'set_tempo':
                 self.tempo_changes.append(
                     TempoChange(tempo2bpm(msg.tempo), msg.time))
-            elif msg.type in ['note_on', 'note_off']:
-                warnings.warn(
-                    'Track 0 contains note information; This file may be invalid.',
-                    RuntimeWarning)
+            # track 0 can have note information for type 0 midi
+
 
     def _load_instruments(self, midi_data):
         """Populates ``self.instruments`` using ``midi_data``.
@@ -180,6 +177,12 @@ class MidiObject(object):
             return
 
         scale = res / self.resolution
+
+        # change the event time for meta events
+        for e in self.tempo_changes + self.key_signatures + self.time_signatures:
+            e.time = round(e.time * scale)
+
+        # change the event time for notes
         for ins in self.instruments:
             ins.change_resolution(scale)
         self.resolution = res
